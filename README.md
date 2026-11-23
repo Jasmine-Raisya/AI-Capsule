@@ -4,9 +4,9 @@ AI Capsule is a private library for AI prompts. Sign in with GitHub to save prom
 
 ## Deployment status
 
-**Public HTTPS URL** · Pending deployment.
+**Public HTTPS URL** · [https://jasmine-ai-capsule-fnd8h2hfe4bjc4cz.japanwest-01.azurewebsites.net](https://jasmine-ai-capsule-fnd8h2hfe4bjc4cz.japanwest-01.azurewebsites.net).
 
-**Target platform** · Render Free Web Service. The checks below are local results. After deploying, record the actual public URL and both cloud cURL results here for the assessor.
+**Platform** · Azure App Service Free (F1), Node.js 22, Japan West. The GitHub Actions workflow deploys changes pushed to the `main` branch of [AI-Capsule](https://github.com/Jasmine-Raisya/AI-Capsule).
 
 ## Run locally
 
@@ -32,21 +32,17 @@ Express serves the built React frontend and the API on port 3000 by default. Aft
 | `PORT` | Port supplied by the host. Defaults to `3000` locally. |
 | `DATABASE_PATH` | Optional SQLite path. Defaults to `./data/capsules.db`. |
 
-Keep the local `.env` private. In Render, enter secret values through the service's Environment settings.
+Keep the local `.env` private. Enter production secrets in Azure App Service environment variables, never in the repository.
 
-## Deploy on Render
+## Deploy on Azure
 
-1. Push this project directory to its own GitHub repository and connect that repository to a new Render **Web Service**. Choose **Node** and **Free**. If the repository holds this project in a subdirectory, enter the subdirectory as the **Root Directory**. [Render's Express deployment guide](https://render.com/docs/deploy-node-express-app)
-2. In the service settings, set the build command to `npm ci --include=dev && npm run build`, the start command to `npm start`, and the health check path to `/api/health`. The included `render.yaml` also declares these settings for a repository with the project at the root.
-3. Copy the service's assigned `https://…onrender.com` URL. Register a GitHub OAuth App with that homepage URL and add `/auth/github/callback` to it for the callback URL. Use the deployed OAuth App's credentials on Render and keep the local OAuth App for development.
-4. Set `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` and `JWT_SECRET` in Render. Render sets `RENDER_EXTERNAL_URL` and `PORT`. For a custom domain, set `APP_URL` to its HTTPS origin and update GitHub's callback URL to match. [Render's environment variable reference](https://render.com/docs/environment-variables)
-5. Deploy and open the public URL. Confirm `/api/health` returns `{"status":"ok"}`. Run both unauthenticated checks below, then sign in with GitHub and create, reload, edit and delete a capsule.
+The repository is connected to Azure App Service through GitHub Actions. Push a change to `main` to trigger a build, test and deployment. The workflow is in `.github/workflows/main_jasmine-ai-capsule.yml` on GitHub. Set `APP_URL`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `JWT_SECRET` and `DATABASE_PATH` in Azure's environment variables. The OAuth callback is the public URL followed by `/auth/github/callback`. Keep secret values private.
 
 ### Storage and limitation
 
 On startup, Express opens SQLite, creates the parent directory, and initializes `capsules` and its ownership index if absent. The database assigns the record ID and creation timestamp. The API stores the verified GitHub user ID in `user_id`. Every list, update, and delete query matches that owner. A local database file persists across restarts.
 
-Render Free's filesystem is ephemeral. A restart, redeploy, or idle spin-down can erase the SQLite file and the saved capsules. An attached persistent disk on a supported plan can preserve the file if `DATABASE_PATH` points to the mounted disk. [Render Free service limits](https://render.com/docs/free#local-files-lost-on-redeploy)
+Azure is configured to store SQLite at `/home/data/capsules.db`, outside the deployed application files. Back up the database if its contents matter; removing the App Service or its storage can remove the data.
 
 ## Pages and API
 
@@ -80,17 +76,17 @@ A local Chrome run used a simulated GitHub account to check the compiled React a
 
 ### Required cloud cURL checks
 
-Replace `https://YOUR-APP` with the actual deployed origin. In Windows PowerShell, use `curl.exe` if `curl` resolves to an alias.
+In Windows PowerShell, use `curl.exe` if `curl` resolves to an alias. These checks were run against the live deployment on 23 November 2026.
 
 ```sh
-curl -i https://YOUR-APP/api/capsules
-curl -i -H "Cookie: token=fake-token-123" https://YOUR-APP/api/capsules
+curl -i https://jasmine-ai-capsule-fnd8h2hfe4bjc4cz.japanwest-01.azurewebsites.net/api/capsules
+curl -i -H "Cookie: token=fake-token-123" https://jasmine-ai-capsule-fnd8h2hfe4bjc4cz.japanwest-01.azurewebsites.net/api/capsules
 ```
 
 | Check | Observed locally | Public result |
 | --- | --- | --- |
-| Missing cookie | `401 Unauthorized`, `{"error":"Unauthorized"}` | Pending deployment |
-| Fake session cookie | `401 Unauthorized`, `{"error":"Unauthorized"}` | Pending deployment |
+| Missing cookie | `401 Unauthorized`, `{"error":"Unauthorized"}` | `401 Unauthorized`, `{"error":"Unauthorized"}` |
+| Fake session cookie | `401 Unauthorized`, `{"error":"Unauthorized"}` | `401 Unauthorized`, `{"error":"Unauthorized"}` |
 
 ### Record the 3–5 minute submission video
 
@@ -98,7 +94,7 @@ curl -i -H "Cookie: token=fake-token-123" https://YOUR-APP/api/capsules
 2. Run both cURL checks from the previous section and show their `401` status codes.
 3. Sign in through GitHub and show the protected dashboard.
 4. Add a capsule, reload and open it, edit its version and review fields, then delete it.
-5. Show the Render service settings and environment variable names with secret values hidden. Describe how the SQLite file is created and when Render Free can lose it. Keep the application JWT out of the recording.
+5. Show the Azure App Service settings and environment variable names with secret values hidden. Describe how the SQLite file is created and stored under `/home/data`. Keep the application JWT out of the recording.
 6. Check the recording plays with audio and submit the source ZIP and MP4 directly to the LMS.
 
 ## AI-assisted development
@@ -107,4 +103,5 @@ OpenAI Codex generated and reviewed the implementation, tests and deployment con
 
 The first Express draft set `Referrer-Policy: no-referrer`. In Chrome, that made the sign-out form send `Origin: null`, so Express rejected it with `403`. Changing the policy to `same-origin` restored the browser's same-origin form submission. The app still rejects cross-origin sign-out requests. [Fetch standard for the Origin header](https://fetch.spec.whatwg.org/#origin-header)
 
-The implementation serves React and the API from one Express process. The browser can send its Secure session cookie with same-origin requests, and deployment needs one public origin for both the UI and OAuth callback. The integration test verifies the Express OAuth callback against a simulated provider and exercises SQLite ownership with two GitHub IDs. Live GitHub verification and the required public cURL checks are pending deployment.
+The implementation serves React and the API from one Express process. The browser can send its Secure session cookie with same-origin requests, and deployment needs one public origin for both the UI and OAuth callback. The integration test verifies the Express OAuth callback against a simulated provider and exercises SQLite ownership with two GitHub IDs. Live GitHub sign-in, capsule creation, reload, update and deletion, and the required public cURL checks were verified on 23 November 2026.
+
