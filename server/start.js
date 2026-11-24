@@ -3,9 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { createApp } from './app.js';
 import { openCapsules } from './capsules.js';
 
-const { APP_URL, RENDER_EXTERNAL_URL, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, JWT_SECRET } = process.env;
+const { APP_URL, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, JWT_SECRET } = process.env;
 const port = Number(process.env.PORT ?? 3000);
-const appUrl = new URL(APP_URL || RENDER_EXTERNAL_URL || `http://localhost:${port}`);
+const appUrl = new URL(APP_URL || `http://localhost:${port}`);
 const dist = fileURLToPath(new URL('../dist/', import.meta.url));
 
 if (!JWT_SECRET || Buffer.byteLength(JWT_SECRET) < 32) {

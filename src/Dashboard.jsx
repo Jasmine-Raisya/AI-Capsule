@@ -1,18 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { booleanFields, textFields } from '../shared/capsule-fields.js';
 import { Brand } from './Brand.jsx';
 
-const fields = {
-  project_name: { label: 'Project name', maxLength: 120, required: true },
-  prompt_title: { label: 'Prompt title', maxLength: 160, required: true },
-  prompt_version: { label: 'Prompt version', maxLength: 32, placeholder: 'e.g. v1' },
-  category: { label: 'Category', maxLength: 60, list: 'categories' },
-  prompt_text: { label: 'Prompt text', maxLength: 12000, required: true, rows: 6 },
-  response_summary: { label: 'Response summary', maxLength: 4000, rows: 3 },
-  usefulness: { label: 'Usefulness', maxLength: 60, list: 'ratings' },
-  screenshot_url: { label: 'Screenshot link', maxLength: 2048, type: 'url' },
-  notes: { label: 'Notes', maxLength: 4000, rows: 3 },
+const inputs = {
+  prompt_version: { placeholder: 'e.g. v1' },
+  category: { list: 'categories' },
+  prompt_text: { rows: 6 },
+  response_summary: { rows: 3 },
+  usefulness: { list: 'ratings' },
+  screenshot_url: { type: 'url' },
+  notes: { rows: 3 },
 };
-const flags = { reviewed: 'Reviewed', improved: 'Improved' };
+const fields = Object.fromEntries(Object.entries(textFields).map(([name, field]) => [name, { ...field, ...inputs[name] }]));
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
 
 async function request(path, options) {
@@ -61,7 +60,7 @@ function CapsuleEditor({ capsule, onSave, onClose }) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const values = Object.fromEntries(Object.keys(fields).map(name => [name, form.get(name)]));
-    for (const name of Object.keys(flags)) values[name] = form.has(name);
+    for (const name of Object.keys(booleanFields)) values[name] = form.has(name);
     setBusy(true);
     setError('');
     try {
@@ -87,7 +86,7 @@ function CapsuleEditor({ capsule, onSave, onClose }) {
           <datalist id="ratings"><option value="Good" /><option value="Needs improvement" /></datalist>
           <fieldset className="flags field-full">
             <legend>Review status</legend>
-            {Object.entries(flags).map(([name, label]) => (
+            {Object.entries(booleanFields).map(([name, label]) => (
               <label key={name}><input type="checkbox" name={name} defaultChecked={capsule?.[name]} />{label}</label>
             ))}
           </fieldset>
@@ -113,7 +112,7 @@ function CapsuleDetail({ capsule, onEdit, onClose }) {
               <a className="text-link" href={capsule[name]} target="_blank" rel="noopener noreferrer">Open screenshot</a> : capsule[name] || '—'}</dd>
           </div>
         ))}
-        {Object.entries(flags).map(([name, label]) => <div key={name}><dt>{label}</dt><dd>{capsule[name] ? 'Yes' : 'No'}</dd></div>)}
+        {Object.entries(booleanFields).map(([name, label]) => <div key={name}><dt>{label}</dt><dd>{capsule[name] ? 'Yes' : 'No'}</dd></div>)}
         <div><dt>Created</dt><dd>{dateFormat.format(new Date(capsule.created_at))}</dd></div>
       </dl>
       <div className="dialog-actions"><button type="button" className="button button-primary" onClick={() => onEdit(capsule)}>Edit capsule</button></div>

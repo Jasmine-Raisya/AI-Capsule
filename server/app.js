@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import express from 'express';
-import { installAuth } from './auth.js';
+import { createAuth } from './auth.js';
 import { readCapsule, validateCapsule } from './capsules.js';
 
 export function createApp({ statements, dist, ...authConfig }) {
@@ -16,7 +16,8 @@ export function createApp({ statements, dist, ...authConfig }) {
     next();
   });
 
-  const { readUser, requireUser, sameOrigin } = installAuth(app, authConfig);
+  const { routes: authRoutes, readUser, requireUser, sameOrigin } = createAuth(authConfig);
+  app.use(authRoutes);
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
   app.get('/api/session', requireUser, (req, res) => res.json({ login: req.user.login }));
 

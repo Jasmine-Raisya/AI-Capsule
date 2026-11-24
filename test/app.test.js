@@ -133,6 +133,15 @@ test('OAuth, session enforcement, and private capsule CRUD through Express', asy
       method: 'POST', cookie: ownerCookie, body: { ...example, screenshot_url: 'file:///example.png' },
     });
     assert.equal(invalidEvidence.status, 400);
+    const tooLong = await call('/api/capsules', {
+      method: 'POST', cookie: ownerCookie, body: { ...example, prompt_title: 'x'.repeat(161) },
+    });
+    assert.deepEqual(await tooLong.json(), { error: 'Prompt title must be 160 characters or fewer.' });
+    const notJson = await fetch(`${url}/api/capsules`, {
+      method: 'POST', headers: { Cookie: ownerCookie, 'Content-Type': 'text/plain' }, body: 'prompt',
+    });
+    assert.equal(notJson.status, 415);
+    assert.equal((await call('/api/capsules/abc', { method: 'DELETE', cookie: ownerCookie })).status, 400);
 
     const creation = await call('/api/capsules', {
       method: 'POST', cookie: ownerCookie, body: { ...example, user_id: String(other.id) },

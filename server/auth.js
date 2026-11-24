@@ -1,5 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { parse } from 'cookie';
+import express from 'express';
 import jwt from 'jsonwebtoken';
 
 const oauthCookie = '__Host-capsule_oauth';
@@ -18,7 +19,8 @@ function sameState(expected, actual) {
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
-export function installAuth(app, { origin, clientId, clientSecret, jwtSecret, oauthFetch = fetch }) {
+export function createAuth({ origin, clientId, clientSecret, jwtSecret, oauthFetch = fetch }) {
+  const routes = express.Router();
   const redirectUri = new URL('/auth/github/callback', origin).href;
 
   function readUser(req) {
@@ -51,7 +53,7 @@ export function installAuth(app, { origin, clientId, clientSecret, jwtSecret, oa
     next();
   }
 
-  app.get('/login', (req, res) => {
+  routes.get('/login', (req, res) => {
     res.set('Cache-Control', 'no-store');
     if (readUser(req)) return res.redirect('/dashboard');
     if (!clientId) return res.redirect('/?sign_in=unavailable');
@@ -72,7 +74,7 @@ export function installAuth(app, { origin, clientId, clientSecret, jwtSecret, oa
     res.redirect(url.href);
   });
 
-  app.get('/auth/github/callback', async (req, res) => {
+  routes.get('/auth/github/callback', async (req, res) => {
     const [state, verifier] = (cookies(req)[oauthCookie] || '').split('.');
     const { code, error } = req.query;
     res.set('Cache-Control', 'no-store');
@@ -123,11 +125,11 @@ export function installAuth(app, { origin, clientId, clientSecret, jwtSecret, oa
     }
   });
 
-  app.post('/logout', sameOrigin, (req, res) => {
+  routes.post('/logout', sameOrigin, (req, res) => {
     res.set('Cache-Control', 'no-store');
     res.clearCookie('token', cookieOptions);
     res.redirect(303, '/');
   });
 
-  return { readUser, requireUser, sameOrigin };
+  return { routes, readUser, requireUser, sameOrigin };
 }

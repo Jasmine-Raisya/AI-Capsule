@@ -1,20 +1,9 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { booleanFields, textFields } from '../shared/capsule-fields.js';
 
-const textFields = {
-  project_name: { label: 'Project name', max: 120, required: true },
-  prompt_title: { label: 'Prompt title', max: 160, required: true },
-  prompt_version: { label: 'Prompt version', max: 32 },
-  prompt_text: { label: 'Prompt text', max: 12000, required: true },
-  response_summary: { label: 'Response summary', max: 4000 },
-  category: { label: 'Category', max: 60 },
-  usefulness: { label: 'Usefulness', max: 60 },
-  screenshot_url: { label: 'Screenshot link', max: 2048 },
-  notes: { label: 'Notes', max: 4000 },
-};
-const booleanFields = ['reviewed', 'improved'];
-const fields = [...Object.keys(textFields), ...booleanFields];
+const fields = [...Object.keys(textFields), ...Object.keys(booleanFields)];
 const columns = ['id', ...fields, 'created_at'].join(', ');
 
 export function openCapsules(path) {
@@ -59,18 +48,18 @@ export function validateCapsule(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return { error: 'Send a JSON object.' };
   const values = {};
 
-  for (const [field, { label, max, required }] of Object.entries(textFields)) {
+  for (const [field, { label, maxLength, required }] of Object.entries(textFields)) {
     const input = body[field] ?? '';
     if (typeof input !== 'string') return { error: `${label} must be text.` };
     const value = input.trim();
     if (!value && required) return { error: `${label} is required.` };
-    if (value.length > max) return { error: `${label} must be ${max} characters or fewer.` };
+    if (value.length > maxLength) return { error: `${label} must be ${maxLength} characters or fewer.` };
     values[field] = value;
   }
 
-  for (const field of booleanFields) {
+  for (const [field, label] of Object.entries(booleanFields)) {
     const value = body[field] ?? false;
-    if (![true, false, 0, 1].includes(value)) return { error: `${field} must be true or false.` };
+    if (![true, false, 0, 1].includes(value)) return { error: `${label} must be true or false.` };
     values[field] = Number(value);
   }
 
